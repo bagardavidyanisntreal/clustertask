@@ -1,4 +1,4 @@
-package dto
+package task
 
 import (
 	"context"
@@ -19,13 +19,15 @@ type Task struct {
 }
 
 func (t Task) Run(podID int, ctx context.Context) {
+	i := 1
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Printf("task %d finish\n", t.id)
 			return
 		case <-time.After(t.freq):
-			fmt.Printf("[pod %d]: running task %d\n", podID, t.id)
+			fmt.Printf("[pod %d]: running task %d take %d\n", podID, t.id, i)
+			i++
 		}
 	}
 }

@@ -5,17 +5,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bagardavidyanisntreal/clustertask/dto"
+	"github.com/bagardavidyanisntreal/clustertask/task"
 )
 
 func NewStorage(taskCount int) (*Storage, time.Duration) {
 	storage := &Storage{
-		tasks: make([]*dto.Task, taskCount),
+		tasks: make([]*task.Task, taskCount),
 	}
 
 	for i := range storage.tasks {
 		taskDur := time.Duration(i+1) * time.Second // for diff task run freq
-		storage.tasks[i] = dto.NewTask(i, taskDur)
+		storage.tasks[i] = task.NewTask(i, taskDur)
 	}
 
 	return storage, time.Duration(len(storage.tasks)+1) * time.Second
@@ -23,19 +23,19 @@ func NewStorage(taskCount int) (*Storage, time.Duration) {
 
 type Storage struct {
 	lock  sync.Mutex
-	tasks []*dto.Task
+	tasks []*task.Task
 }
 
 var ErrCannotAcquire = errors.New("cannot acquire tasks storage")
 
-func (t *Storage) Tasks() ([]*dto.Task, error) {
+func (t *Storage) Tasks() ([]*task.Task, error) {
 	if !t.lock.TryLock() {
 		return nil, ErrCannotAcquire
 	}
 
 	time.Sleep(100 * time.Millisecond) // work simulation
 
-	tasks := make([]*dto.Task, len(t.tasks))
+	tasks := make([]*task.Task, len(t.tasks))
 	for i := range tasks {
 		task := &t.tasks[i]
 		tasks[i] = *task

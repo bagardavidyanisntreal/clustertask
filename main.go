@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -36,22 +37,22 @@ func main() {
 		)
 	}
 
-	done := make(chan struct{}, len(pods)*2)
+	var wg sync.WaitGroup
 
 	for _, pod := range pods {
 		pod := pod
+		wg.Add(2)
+
 		go func() {
 			pod.CacheTasks(ctx)
-			done <- struct{}{}
+			wg.Done()
 		}()
 
 		go func() {
 			pod.RunTasks(ctx)
-			done <- struct{}{}
+			wg.Done()
 		}()
 	}
 
-	for i := 0; i < cap(done); i++ {
-		<-done
-	}
+	wg.Wait()
 }
