@@ -8,7 +8,7 @@ import (
 	"github.com/bagardavidyanisntreal/clustertask/dto"
 )
 
-func NewStorage(taskCount int) *Storage {
+func NewStorage(taskCount int) (*Storage, time.Duration) {
 	storage := &Storage{
 		tasks: make([]*dto.Task, taskCount),
 	}
@@ -18,7 +18,7 @@ func NewStorage(taskCount int) *Storage {
 		storage.tasks[i] = dto.NewTask(i, taskDur)
 	}
 
-	return storage
+	return storage, time.Duration(len(storage.tasks)+1) * time.Second
 }
 
 type Storage struct {

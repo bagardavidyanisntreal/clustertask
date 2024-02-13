@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/bagardavidyanisntreal/clustertask/dto"
@@ -19,6 +20,8 @@ type (
 	}
 )
 
+var cacheOnce sync.Once
+
 func NewPod(id int, podsTotalCnt int, cacheTasksDur time.Duration, tasker tasker, podTasks podTasks) *Pod {
 	pod := &Pod{
 		cacheTasksDur: cacheTasksDur,
@@ -29,9 +32,11 @@ func NewPod(id int, podsTotalCnt int, cacheTasksDur time.Duration, tasker tasker
 		podTasks: podTasks,
 	}
 
-	if err := pod.cacheTasks(); err != nil {
-		log.Printf("start pod %d cache tasks failure: %q", pod.id, err)
-	}
+	cacheOnce.Do(func() {
+		if err := pod.cacheTasks(); err != nil {
+			log.Printf("start pod %d cache tasks failure: %q", pod.id, err)
+		}
+	})
 
 	return pod
 }
@@ -69,11 +74,15 @@ func (p *Pod) cacheTasks() error {
 		return fmt.Errorf("failed to fetch tasks: %w", err)
 	}
 
+	if p.podsTotalCnt > len(tasks) {
+		return p.oneTaskPerPod(tasks)
+	}
+
 	batch := len(tasks) / p.podsTotalCnt
 	var podID int
 
 	for {
-		if len(tasks) < batch {
+		if len(tasks) < batch || batch == 0 {
 			batch = len(tasks)
 		}
 
@@ -83,10 +92,24 @@ func (p *Pod) cacheTasks() error {
 		}
 
 		p.podTasks.SetTasksByPodID(podID, process)
-		log.Printf("succesfully cached %d tasks for pod %d", len(tasks), podID)
+		log.Printf("succesfully cached %d tasks for pod %d", len(process), podID)
 
 		tasks = tasks[batch:]
 		podID++
+	}
+
+	return nil
+}
+
+func (p *Pod) oneTaskPerPod(tasks []*dto.Task) error {
+	for podID := 0; podID < p.podsTotalCnt; podID++ {
+		if podID > len(tasks)-1 {
+			break
+		}
+
+		singleTask := tasks[podID]
+		p.podTasks.SetTasksByPodID(podID, []*dto.Task{singleTask})
+		log.Printf("succesfully cached task %d for pod %d", podID, podID)
 	}
 
 	return nil

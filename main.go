@@ -12,24 +12,25 @@ import (
 )
 
 const (
-	podsTotal     = 4
-	taskTotal     = 100
-	cacheTasksDur = 20 * time.Second
+	podsTotal = 5
+	taskTotal = 10
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	taskStorage := taskstorage.NewStorage(taskTotal)
+	taskStorage, maxDur := taskstorage.NewStorage(taskTotal)
 	tasksByPod := imdbstorage.NewIMDB(podsTotal)
+
+	maxDur = maxDur + time.Second // for sure
 
 	pods := make([]*cluster.Pod, podsTotal)
 	for i := range pods {
 		pods[i] = cluster.NewPod(
 			i,
 			podsTotal,
-			cacheTasksDur,
+			maxDur,
 			taskStorage,
 			tasksByPod,
 		)
