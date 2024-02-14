@@ -29,6 +29,7 @@ func main() {
 	pods := make([]*cluster.Pod, podsTotal)
 	for i := range pods {
 		pods[i] = cluster.NewPod(
+			ctx,
 			i,
 			podsTotal,
 			maxDur,
@@ -38,16 +39,10 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+	wg.Add(len(pods))
 
 	for _, pod := range pods {
 		pod := pod
-		wg.Add(2)
-
-		go func() {
-			pod.CacheTasks(ctx)
-			wg.Done()
-		}()
-
 		go func() {
 			pod.RunTasks(ctx)
 			wg.Done()

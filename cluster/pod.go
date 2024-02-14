@@ -1,8 +1,7 @@
 package cluster
 
 import (
-	"log"
-	"sync"
+	"context"
 	"time"
 
 	"github.com/bagardavidyanisntreal/clustertask/task"
@@ -18,30 +17,33 @@ type (
 	}
 )
 
-var cacheOnce sync.Once
-
-func NewPod(id int, podsTotalCnt int, cacheTasksDur time.Duration, tasker tasker, podTasks podTasks) *Pod {
+func NewPod(
+	ctx context.Context,
+	id int,
+	podsTotalCnt int,
+	cacheDur time.Duration,
+	tasker tasker,
+	podTasks podTasks,
+) *Pod {
 	pod := &Pod{
-		cacheTicker:  time.NewTicker(cacheTasksDur),
+		ticker:       time.NewTicker(cacheDur),
 		podsTotalCnt: podsTotalCnt,
+		ready:        make(chan struct{}),
 
 		id:       id,
 		tasker:   tasker,
 		podTasks: podTasks,
 	}
 
-	cacheOnce.Do(func() {
-		if err := pod.cacheTasks(); err != nil {
-			log.Printf("start pod %d cache tasks failure: %q", pod.id, err)
-		}
-	})
+	go pod.runCaching(ctx)
 
 	return pod
 }
 
 type Pod struct {
-	cacheTicker  *time.Ticker
+	ticker       *time.Ticker
 	podsTotalCnt int
+	ready        chan struct{}
 
 	id       int
 	tasker   tasker

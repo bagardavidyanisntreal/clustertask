@@ -8,16 +8,24 @@ import (
 	"github.com/bagardavidyanisntreal/clustertask/task"
 )
 
-func (p *Pod) CacheTasks(ctx context.Context) {
+func (p *Pod) runCaching(ctx context.Context) {
+	defer func() {
+		close(p.ready)
+		p.ticker.Stop()
+	}()
+
 	for {
+		if err := p.cacheTasks(); err != nil {
+			log.Printf("pod %d cache tasks failure: %q", p.id, err)
+		}
+		p.ready <- struct{}{}
+
 		select {
 		case <-ctx.Done():
 			fmt.Printf("stopping pod %d\n", p.id)
 			return
-		case <-p.cacheTicker.C:
-			if err := p.cacheTasks(); err != nil {
-				log.Printf("pod %d cache tasks failure: %q", p.id, err)
-			}
+		case <-p.ticker.C:
+			continue
 		}
 	}
 }
