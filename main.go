@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 
 const (
 	podsTotal = 5
-	taskTotal = 10
+	taskTotal = 15
 )
 
 func main() {
@@ -23,6 +22,7 @@ func main() {
 
 	taskStorage, maxDur := taskstorage.NewStorage(taskTotal)
 	tasksByPod := imdbstorage.NewIMDB(podsTotal)
+	defer tasksByPod.Close()
 
 	maxDur = maxDur + time.Second // for sure
 
@@ -38,16 +38,17 @@ func main() {
 		)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(pods))
+	done := make(chan struct{}, len(pods))
 
 	for _, pod := range pods {
 		pod := pod
 		go func() {
 			pod.RunTasks(ctx)
-			wg.Done()
+			done <- struct{}{}
 		}()
 	}
 
-	wg.Wait()
+	for range pods {
+		<-done
+	}
 }

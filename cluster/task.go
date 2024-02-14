@@ -9,7 +9,7 @@ func (p *Pod) RunTasks(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case _, ok := <-p.ready:
+		case _, ok := <-p.podTasks.Ready():
 			if !ok {
 				return
 			}

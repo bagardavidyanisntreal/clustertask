@@ -9,16 +9,12 @@ import (
 )
 
 func (p *Pod) runCaching(ctx context.Context) {
-	defer func() {
-		close(p.ready)
-		p.ticker.Stop()
-	}()
+	defer p.ticker.Stop()
 
 	for {
 		if err := p.cacheTasks(); err != nil {
 			log.Printf("pod %d cache tasks failure: %q", p.id, err)
 		}
-		p.ready <- struct{}{}
 
 		select {
 		case <-ctx.Done():

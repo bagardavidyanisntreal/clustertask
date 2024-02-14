@@ -14,6 +14,7 @@ type (
 	podTasks interface {
 		SetTasksByPodID(podID int, val []*task.Task)
 		TasksByPodID(podID int) []*task.Task
+		Ready() chan struct{}
 	}
 )
 
@@ -28,7 +29,6 @@ func NewPod(
 	pod := &Pod{
 		ticker:       time.NewTicker(cacheDur),
 		podsTotalCnt: podsTotalCnt,
-		ready:        make(chan struct{}),
 
 		id:       id,
 		tasker:   tasker,
@@ -43,7 +43,6 @@ func NewPod(
 type Pod struct {
 	ticker       *time.Ticker
 	podsTotalCnt int
-	ready        chan struct{}
 
 	id       int
 	tasker   tasker
